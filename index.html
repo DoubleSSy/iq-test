@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0c0c0f">
+  <title>IQ Тест</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <script src="https://yandex.ru/games/sdk/v2"></script>
+
+  <div id="app">
+
+    <!-- ── ЗАГРУЗКА ───────────────────────────────────────── -->
+    <div id="screen-loading" class="screen active">
+      <div class="loading-ring"></div>
+      <p class="loading-label">Инициализация</p>
+    </div>
+
+    <!-- ── ГЛАВНАЯ ────────────────────────────────────────── -->
+    <div id="screen-welcome" class="screen">
+      <div class="screen-content">
+        <div class="hero-icon">🧠</div>
+        <h1 class="page-title">IQ <span>Тест</span></h1>
+        <p class="page-subtitle">25 вопросов на логику, числа и пространственное мышление. Результат нормируется по вашему возрасту.</p>
+        <div id="best-score-display"></div>
+        <button class="btn btn-primary" id="btn-start">Начать тест</button>
+        <button class="btn btn-ghost" id="btn-leaderboard">🏆 &nbsp;Таблица лидеров</button>
+      </div>
+    </div>
+
+    <!-- ── ВОЗРАСТ ────────────────────────────────────────── -->
+    <div id="screen-age" class="screen">
+      <div class="screen-content">
+        <div>
+          <p class="section-label">Шаг 1 из 3</p>
+          <h2 class="page-title" style="text-align:left;margin-top:6px">Ваш возраст</h2>
+          <p class="page-subtitle" style="text-align:left;margin-top:8px">Возраст используется для нормализации IQ по стандартным психометрическим шкалам</p>
+        </div>
+        <div class="age-widget">
+          <div class="age-number" id="age-value">25</div>
+          <div class="age-controls">
+            <button class="age-btn" id="age-plus">+</button>
+            <button class="age-btn" id="age-minus">−</button>
+          </div>
+        </div>
+        <p class="age-info" id="age-hint">25 лет — пик когнитивных способностей</p>
+        <button class="btn btn-primary" id="btn-age-next">Продолжить →</button>
+      </div>
+    </div>
+
+    <!-- ── НИКНЕЙМ ────────────────────────────────────────── -->
+    <div id="screen-nickname" class="screen">
+      <div class="screen-content">
+        <div>
+          <p class="section-label">Шаг 2 из 3</p>
+          <h2 class="page-title" style="text-align:left;margin-top:6px">Ваше имя</h2>
+          <p class="page-subtitle" style="text-align:left;margin-top:8px">Имя будет отображаться в таблице лидеров рядом с вашим результатом</p>
+        </div>
+        <div class="nickname-widget">
+          <input class="nickname-input" id="nickname-input" type="text" maxlength="20"
+                 placeholder="Введите никнейм..." autocomplete="off" spellcheck="false">
+          <p class="nickname-hint" id="nickname-hint">от 2 до 20 символов</p>
+        </div>
+        <button class="btn btn-primary" id="btn-nickname-next" disabled>Продолжить →</button>
+        <button class="btn btn-ghost"  id="btn-nickname-skip">Пропустить</button>
+      </div>
+    </div>
+
+    <!-- ── ИНСТРУКЦИЯ ─────────────────────────────────────── -->
+    <div id="screen-instructions" class="screen">
+      <div class="screen-content">
+        <div>
+          <p class="section-label">Шаг 3 из 3</p>
+          <h2 class="page-title" style="text-align:left;margin-top:6px">Правила теста</h2>
+        </div>
+        <div class="instruction-list card">
+          <div class="instr-row">
+            <span class="instr-icon">📋</span>
+            <span class="instr-text">25 вопросов — числовые ряды, логика, аналогии, паттерны, пространство</span>
+          </div>
+          <div class="instr-row">
+            <span class="instr-icon">⏱</span>
+            <span class="instr-text">40 секунд на каждый вопрос. Если время вышло — вопрос засчитывается как пропущенный</span>
+          </div>
+          <div class="instr-row">
+            <span class="instr-icon">🎯</span>
+            <span class="instr-text">Один правильный ответ из четырёх вариантов</span>
+          </div>
+          <div class="instr-row">
+            <span class="instr-icon">📊</span>
+            <span class="instr-text">IQ рассчитывается с учётом возраста по нормам</span>
+          </div>
+        </div>
+        <div class="countdown-bar">
+          <span class="instr-text" style="font-size:12px;color:var(--text-3)">Тест начнётся через</span>
+          <div class="countdown-track">
+            <div class="countdown-fill" id="countdown-fill" style="width:100%"></div>
+          </div>
+          <span class="countdown-num" id="countdown-num">5</span>
+        </div>
+        <button class="btn btn-primary" id="btn-instructions-start" disabled>Начать тест</button>
+      </div>
+    </div>
+
+    <!-- ── КВИЗ ───────────────────────────────────────────── -->
+    <div id="screen-quiz" class="screen">
+      <div class="quiz-topbar">
+        <div class="quiz-topbar-inner">
+          <div class="progress-wrap">
+            <div class="progress-meta">
+              <span id="question-counter">1 / 25</span>
+              <span id="category-meta"></span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+          </div>
+          <div class="timer-wrap">
+            <svg class="timer-svg" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+              <circle class="timer-track" cx="20" cy="20" r="16"/>
+              <circle class="timer-arc"  cx="20" cy="20" r="16" id="timer-arc"/>
+            </svg>
+            <span class="timer-num" id="timer-text">40</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quiz-body">
+        <span class="q-category" id="question-category"></span>
+
+        <div class="q-card" id="question-card">
+          <div class="q-text" id="question-text"></div>
+          <div class="q-visual" id="question-visual" style="display:none"></div>
+        </div>
+
+        <div class="options-grid" id="options-grid"></div>
+
+        <button class="btn-next" id="btn-next" disabled>Далее →</button>
+      </div>
+    </div>
+
+    <!-- ── АНАЛИЗ ─────────────────────────────────────────── -->
+    <div id="screen-analyzing" class="screen">
+      <div class="screen-content">
+        <div class="analyze-icon">🧠</div>
+        <p class="analyze-title">Анализируем результаты...</p>
+        <div class="analyze-steps">
+          <div class="step" id="step1">Обработка ответов</div>
+          <div class="step" id="step2">Расчёт первичных баллов</div>
+          <div class="step" id="step3">Нормализация по возрасту</div>
+          <div class="step" id="step4">Формирование профиля</div>
+        </div>
+        <div class="analyze-track">
+          <div class="analyze-fill" id="analyze-progress"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── РЕЗУЛЬТАТ ──────────────────────────────────────── -->
+    <div id="screen-results" class="screen">
+      <div class="screen-content">
+
+        <div class="results-hero">
+          <div class="iq-display" id="iq-score">0</div>
+          <div class="iq-unit">IQ</div>
+          <div class="result-badge">
+            <div class="result-category" id="result-category"></div>
+            <div class="result-stars"    id="result-stars"></div>
+            <div class="result-pct"      id="result-pct"></div>
+            <div id="result-record"></div>
+          </div>
+        </div>
+
+        <div class="card result-desc" id="result-desc"></div>
+
+        <div class="breakdown-card">
+          <div class="breakdown-title">Профиль способностей</div>
+          <div id="breakdown-bars"></div>
+        </div>
+
+        <div class="lb-card">
+          <div class="lb-header">🏆 &nbsp;Таблица лидеров</div>
+          <div id="leaderboard-entries"><div class="lb-loading">Загрузка...</div></div>
+        </div>
+
+        <div class="result-actions">
+          <button class="btn btn-primary" id="btn-retry">Пройти снова</button>
+          <button class="btn btn-ghost"   id="btn-share">🔗 &nbsp;Поделиться результатом</button>
+          <button class="btn btn-ghost"   id="btn-leaderboard-full">Полная таблица лидеров</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── ШЕРИНГ (просмотр чужого результата) ───────────── -->
+    <div id="screen-share-view" class="screen">
+      <div class="screen-content">
+        <div class="share-card">
+          <div class="share-card-label">Результат IQ-теста</div>
+          <div class="iq-display" id="share-iq">—</div>
+          <div class="iq-unit">IQ</div>
+          <div class="result-badge" style="margin-top:8px">
+            <div class="result-category" id="share-category"></div>
+            <div class="result-stars"    id="share-stars"></div>
+            <div class="result-pct"      id="share-pct"></div>
+          </div>
+        </div>
+        <p class="page-subtitle">Проверь свои интеллектуальные способности!</p>
+        <button class="btn btn-primary" id="btn-share-start">🧠 &nbsp;Пройти тест →</button>
+      </div>
+    </div>
+
+    <!-- ── ЛИДЕРБОРД ──────────────────────────────────────── -->
+    <div id="screen-leaderboard" class="screen">
+      <div class="screen-content">
+        <div>
+          <h2 class="page-title" style="text-align:left">Таблица лидеров</h2>
+          <p class="page-subtitle" style="text-align:left;margin-top:4px">Лучшие результаты IQ-теста</p>
+        </div>
+        <div class="lb-card">
+          <div class="lb-header">🏆 &nbsp;Рейтинг игроков</div>
+          <div id="leaderboard-full-list"><div class="lb-loading">Загрузка...</div></div>
+        </div>
+        <button class="btn btn-ghost" id="btn-back-from-leaderboard">← Назад</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/sdk.js"></script>
+  <script src="js/questions.js"></script>
+  <script src="js/results.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/quiz.js"></script>
+  <script src="js/main.js"></script>
+
+</body>
+</html>
