@@ -67,14 +67,16 @@ const SDK = {
   },
 
   gameplayStart() {
-    if (!this.ysdk || !this.isReady) return;
-    try { this.ysdk.features.GameplayAPI?.start(); } catch(e) {}
+    if (this.ysdk && this.isReady) {
+      try { this.ysdk.features.GameplayAPI?.start(); } catch(e) {}
+    }
     console.log('[SDK] GameplayAPI.start()');
   },
 
   gameplayStop() {
-    if (!this.ysdk || !this.isReady) return;
-    try { this.ysdk.features.GameplayAPI?.stop(); } catch(e) {}
+    if (this.ysdk && this.isReady) {
+      try { this.ysdk.features.GameplayAPI?.stop(); } catch(e) {}
+    }
     console.log('[SDK] GameplayAPI.stop()');
   },
 
@@ -320,6 +322,10 @@ const SDK = {
     } catch(e) {
       console.warn('[SDK] Ошибка shortcut:', e);
     }
+  },
+
+  isAuthorized() {
+    return !!(this.player && this.player.isAuthorized());
   },
 
   // Имя игрока

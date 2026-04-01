@@ -64,6 +64,10 @@
     if (Math.abs(dy) > 8) { setAge(currentAge + (dy > 0 ? 1 : -1)); _ty = e.touches[0].clientY; }
   }, { passive: false });
 
+  document.getElementById('btn-age-back').addEventListener('click', () => {
+    UI.showScreen('screen-welcome', 'left');
+  });
+
   document.getElementById('btn-age-next').addEventListener('click', () => {
     UI.showScreen('screen-nickname', 'right');
     initNicknameScreen();
@@ -107,6 +111,10 @@
     proceedToInstructions();
   });
 
+  document.getElementById('btn-nickname-back').addEventListener('click', () => {
+    UI.showScreen('screen-age', 'left');
+  });
+
   // Вызывается при каждом входе на экран никнейма
   function initNicknameScreen() {
     nicknameInput.value = currentNickname;
@@ -148,6 +156,12 @@
       }
     }, 1000);
   }
+
+  document.getElementById('btn-instructions-back').addEventListener('click', () => {
+    clearInterval(_cdInterval);
+    UI.showScreen('screen-nickname', 'left');
+    initNicknameScreen();
+  });
 
   document.getElementById('btn-instructions-start').addEventListener('click', () => {
     clearInterval(_cdInterval);
@@ -195,17 +209,56 @@
 
   // ── Лидерборд ─────────────────────────────────────────────
 
+  const btnLeaderboardAuth = document.getElementById('btn-leaderboard-auth');
+
   async function loadLeaderboard() {
     const listEl = document.getElementById('leaderboard-full-list');
     if (listEl) listEl.innerHTML = '<div class="lb-loading">Загрузка...</div>';
     const entries = await SDK.getLeaderboardEntries();
     UI.renderLeaderboard(entries, Quiz.getLastIQ());
+
+    // Показываем кнопку авторизации если SDK готов, но игрок не авторизован
+    if (SDK.isReady && !SDK.isAuthorized()) {
+      btnLeaderboardAuth.style.display = '';
+    } else {
+      btnLeaderboardAuth.style.display = 'none';
+    }
   }
+
+  btnLeaderboardAuth.addEventListener('click', async () => {
+    btnLeaderboardAuth.disabled = true;
+    btnLeaderboardAuth.textContent = 'Авторизация...';
+    const ok = await SDK.authorize();
+    if (ok) {
+      btnLeaderboardAuth.style.display = 'none';
+      await loadLeaderboard();
+    } else {
+      btnLeaderboardAuth.disabled = false;
+      btnLeaderboardAuth.textContent = '🔑 Войти в Яндекс для глобального рейтинга';
+    }
+  });
 
   document.getElementById('btn-back-from-leaderboard').addEventListener('click', async () => {
     UI.showScreen('screen-welcome', 'left');
     const data = await SDK.loadData();
     UI.setBestScore(data.bestIQ || null);
   });
+
+  // ── TV: кнопка «Назад» на пульте ─────────────────────────
+
+  if (SDK.ysdk && SDK.isReady) {
+    SDK.ysdk.on(SDK.ysdk.EVENTS.HISTORY_BACK, () => {
+      // Определяем текущий активный экран и делаем «назад»
+      const active = document.querySelector('.screen.active');
+      if (!active) return;
+      const id = active.id;
+      if (id === 'screen-age')          { UI.showScreen('screen-welcome', 'left'); }
+      else if (id === 'screen-nickname'){ UI.showScreen('screen-age', 'left'); }
+      else if (id === 'screen-instructions') { clearInterval(_cdInterval); UI.showScreen('screen-nickname', 'left'); initNicknameScreen(); }
+      else if (id === 'screen-leaderboard')  { UI.showScreen('screen-welcome', 'left'); }
+      else if (id === 'screen-results')      { UI.showScreen('screen-welcome', 'left'); }
+      else if (id === 'screen-welcome')      { SDK.ysdk.dispatchEvent(SDK.ysdk.EVENTS.EXIT); }
+    });
+  }
 
 })();
