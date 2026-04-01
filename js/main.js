@@ -30,6 +30,9 @@
 
   UI.showScreen('screen-welcome', 'right');
 
+  // Игра готова к взаимодействию (обязательно для Яндекс)
+  SDK.gameReady();
+
   // ── Главная ───────────────────────────────────────────────
 
   document.getElementById('btn-start').addEventListener('click', () => {

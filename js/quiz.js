@@ -35,6 +35,13 @@ const Quiz = {
     // Перетасовать вопросы внутри каждой категории, сохраняя нарастание сложности
     this.state.questions = this._shuffleQuestions(QUESTIONS);
 
+    // Уведомляем SDK о начале геймплея
+    SDK.gameplayStart();
+
+    // Обработка паузы/возобновления от платформы (реклама, вкладка)
+    SDK.onPause(() => this._pauseTimer());
+    SDK.onResume(() => this._resumeTimer());
+
     this.loadQuestion(0);
   },
 
@@ -151,7 +158,20 @@ const Quiz = {
   _startTimer() {
     clearInterval(this.state.timerInterval);
     this.state.timeLeft = this.state.QUESTION_TIME;
+    this.state.paused = false;
 
+    this.state.timerInterval = setInterval(() => this._tick(), 1000);
+  },
+
+  _pauseTimer() {
+    if (this.state.paused || this.state.finished) return;
+    this.state.paused = true;
+    clearInterval(this.state.timerInterval);
+  },
+
+  _resumeTimer() {
+    if (!this.state.paused || this.state.finished) return;
+    this.state.paused = false;
     this.state.timerInterval = setInterval(() => this._tick(), 1000);
   },
 
@@ -216,6 +236,11 @@ const Quiz = {
     clearTimeout(this._unlockTimeout);
     clearTimeout(this._autoNextTimeout);
 
+    // Уведомляем SDK об окончании геймплея
+    SDK.gameplayStop();
+    SDK.onPause(null);
+    SDK.onResume(null);
+
     // Показываем экран анализа
     UI.showScreen('screen-analyzing', 'right');
     SDK.hideBanner();
@@ -262,6 +287,10 @@ const Quiz = {
     SDK.getLeaderboardEntries().then(entries => {
       UI.renderLeaderboard(entries, iq);
     }).catch(() => {});
+
+    // Через 3 сек предложить оценить игру, через 10 сек — ярлык
+    setTimeout(() => SDK.tryRequestReview(), 3000);
+    setTimeout(() => SDK.tryShowShortcutPrompt(), 10000);
   },
 
   getLastIQ() {

@@ -35,6 +35,16 @@ const SDK = {
 
       this._showBanner();
 
+      // Обработка паузы/возобновления от платформы (реклама, переключение вкладки)
+      this.ysdk.on('game_api_pause', () => {
+        if (this._onPause) this._onPause();
+        if (window.gameAudio) window.gameAudio.pause();
+      });
+      this.ysdk.on('game_api_resume', () => {
+        if (this._onResume) this._onResume();
+        if (window.gameAudio) window.gameAudio.play();
+      });
+
       document.addEventListener('visibilitychange', () => {
         if (window.gameAudio) {
           if (document.hidden) window.gameAudio.pause();
@@ -47,6 +57,33 @@ const SDK = {
       this.isReady = false;
     }
   },
+
+  // ── Игровые события (обязательные для Яндекс) ────────────
+
+  gameReady() {
+    if (!this.ysdk || !this.isReady) return;
+    try { this.ysdk.features.LoadingAPI?.ready(); } catch(e) {}
+    console.log('[SDK] LoadingAPI.ready()');
+  },
+
+  gameplayStart() {
+    if (!this.ysdk || !this.isReady) return;
+    try { this.ysdk.features.GameplayAPI?.start(); } catch(e) {}
+    console.log('[SDK] GameplayAPI.start()');
+  },
+
+  gameplayStop() {
+    if (!this.ysdk || !this.isReady) return;
+    try { this.ysdk.features.GameplayAPI?.stop(); } catch(e) {}
+    console.log('[SDK] GameplayAPI.stop()');
+  },
+
+  // Коллбэки паузы/возобновления (устанавливаются из Quiz)
+  _onPause: null,
+  _onResume: null,
+
+  onPause(fn) { this._onPause = fn; },
+  onResume(fn) { this._onResume = fn; },
 
   // ── Данные игрока ──────────────────────────────────────────
 
@@ -161,7 +198,7 @@ const SDK = {
 
     if (!this.ysdk || !this.isReady || !this.player || !this.player.isAuthorized()) return;
     try {
-      await this.ysdk.leaderboards.setLeaderboardScore({ leaderboardName: 'iq_score', score: iq });
+      await this.ysdk.leaderboards.setScore('iq_score', iq);
     } catch(e) {
       console.warn('[SDK] Ошибка лидерборда:', e);
     }
@@ -204,10 +241,10 @@ const SDK = {
     // Пробуем Яндекс-лидерборд если есть SDK
     if (this.ysdk && this.isReady) {
       try {
-        const data = await this.ysdk.leaderboards.getLeaderboardEntries({
-          leaderboardName: 'iq_score',
+        const data = await this.ysdk.leaderboards.getEntries('iq_score', {
           quantityTop: 10,
-          includeUser: true
+          includeUser: true,
+          quantityAround: 3
         });
         const yandexEntries = data.entries.map(e => ({
           rank:  e.rank,
@@ -257,6 +294,32 @@ const SDK = {
 
     combined.sort((a, b) => b.score - a.score);
     return combined.slice(0, 10).map((e, i) => ({ ...e, rank: i + 1 }));
+  },
+
+  // ── Оценка и ярлык ─────────────────────────────────────────
+
+  async tryRequestReview() {
+    if (!this.ysdk || !this.isReady) return;
+    try {
+      const { value } = await this.ysdk.feedback.canReview();
+      if (value) {
+        await this.ysdk.feedback.requestReview();
+      }
+    } catch(e) {
+      console.warn('[SDK] Ошибка requestReview:', e);
+    }
+  },
+
+  async tryShowShortcutPrompt() {
+    if (!this.ysdk || !this.isReady) return;
+    try {
+      const prompt = await this.ysdk.shortcut.canShowPrompt();
+      if (prompt.canShow) {
+        await this.ysdk.shortcut.showPrompt();
+      }
+    } catch(e) {
+      console.warn('[SDK] Ошибка shortcut:', e);
+    }
   },
 
   // Имя игрока
